@@ -1,19 +1,12 @@
-const { Client, GatewayIntentBits, ActivityType } = require('discord.js');
+const { Client, GatewayIntentBits, ActivityType, REST, Routes } = require('discord.js');
 const express = require('express');
 
-// 1. تشغيل سيرفر ويب وهمي لمنع منصة Railway من إغلاق البوت
+// 1. سيرفر ويب لإبقاء البوت متصلاً
 const app = express();
-const port = process.env.PORT || 8080;
+app.get('/', (req, res) => res.send('SH CLAN BOT IS ONLINE!'));
+app.listen(process.env.PORT || 8080);
 
-app.get('/', (req, res) => {
-    res.send('SH CLAN BOT IS ONLINE 24/7!');
-});
-
-app.listen(port, () => {
-    console.log(`Web server is running perfectly on port ${port}`);
-});
-
-// 2. إعداد البوت والصلاحيات اللازمة لقراءة الرسائل والتفاعل
+// 2. إعداد البوت
 const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,
@@ -22,30 +15,45 @@ const client = new Client({
     ]
 });
 
-// 3. حدث تشغيل البوت بنجاح وتحديد الحالة (Status)
-client.once('ready', () => {
-    console.log(`[SUCCESS] Logged in as ${client.user.tag}!`);
-    
-    // تعيين حالة البot (يلعب SH CLAN)
+// 3. تعريف الأوامر (Slash Commands)
+const commands = [
+    {
+        name: 'menu',
+        description: 'عرض القائمة الرئيسية للكلان'
+    }
+];
+
+client.once('ready', async () => {
+    console.log(`Logged in as ${client.user.tag}!`);
     client.user.setActivity('SH CLAN', { type: ActivityType.Playing });
-});
 
-// 4. الاستماع للأوامر (مثل أمر menu)
-client.on('messageCreate', async (message) => {
-    // تجاهل رسائل البوتات الأخرى
-    if (message.author.bot) return;
-
-    // التحقق من الأمر menu
-    if (message.content.toLowerCase() === 'menu' || message.content === '!menu') {
-        try {
-            await message.reply({
-                content: ' Our bot is ready! This is the main menu for **SH CLAN**.'
-            });
-        } catch (error) {
-            console.error('Error sending message:', error);
-        }
+    // تسجيل الأوامر
+    const rest = new REST({ version: '10' }).setToken(process.env.TOKEN || process.env.DISCORD_TOKEN);
+    try {
+        await rest.put(Routes.applicationCommands(client.user.id), { body: commands });
+        console.log('Successfully registered commands.');
+    } catch (error) {
+        console.error(error);
     }
 });
 
-// 5. تسجيل الدخول باستخدام التوكن المخزن في بيئة العمل (Variables)
-const token = process.env.DISCORD_TOKEN || process.env.TOKEN;
+// 4. الرد على الأوامر (Slash Commands)
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+
+    if (interaction.commandName === 'menu') {
+        await interaction.reply({
+            content: 'مرحباً بك في قائمة **SH CLAN** الرئيسية! البوت يعمل الآن بشكل صحيح.'
+        });
+    }
+});
+
+// 5. الرد على الرسائل العادية
+client.on('messageCreate', async (message) => {
+    if (message.author.bot) return;
+    if (message.content.toLowerCase() === 'menu' || message.content === 'قائمة') {
+        await message.reply('هذه هي القائمة الرئيسية للكلان، جرب استخدام الأمر المدمج `/menu` أيضاً!');
+    }
+});
+
+client.login(process.env.TOKEN || process.env.DISCORD_TOKEN);
