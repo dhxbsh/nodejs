@@ -1,35 +1,31 @@
-const { Client, GatewayIntentBits, ActivityType, REST, Routes } = require('discord.js');
-const express = require('express');
+const { Client, GatewayIntentBits, SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-// سيرفر ويب للحفاظ على اتصال البوت
-const app = express();
-app.get('/', (req, res) => res.send('BOT IS ONLINE'));
-app.listen(process.env.PORT || 8080);
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
-const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent
-    ]
+// تسجيل أمر السلاش عند تشغيل البوت
+client.once('ready', async () => {
+    const command = new SlashCommandBuilder()
+        .setName('menu')
+        .setDescription('عرض قائمة SH CLAN الرئيسية');
+
+    await client.application.commands.create(command);
+    console.log('[SUCCESS] Slash command registered!');
 });
 
-client.once('ready', () => {
-    console.log(`[SUCCESS] Logged in as ${client.user.tag}!`);
-    client.user.setActivity('SH CLAN', { type: ActivityType.Playing });
-});
+// التعامل مع أوامر السلاش
+client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
 
-client.on('messageCreate', async (message) => {
-    if (message.author.bot) return;
-    if (message.content.toLowerCase() === 'menu' || message.content === 'قائمة') {
-        message.reply('أهلاً بك في قائمة SH CLAN الرئيسية!');
+    if (interaction.commandName === 'menu') {
+        const row = new ActionRowBuilder()
+            .addComponents(
+                new ButtonBuilder().setCustomId('members').setLabel('👤 الأعضاء').setStyle(ButtonStyle.Primary),
+                new ButtonBuilder().setCustomId('stats').setLabel('📊 الإحصائيات').setStyle(ButtonStyle.Secondary)
+            );
+
+        // ephemeral: true تعني الرسالة تظهر لك أنت فقط
+        await interaction.reply({ content: 'أهلاً بك في قائمة SH CLAN الرئيسية:', components: [row], ephemeral: true });
     }
 });
 
-// تسجيل الدخول مع تأمين التوكن
-const token = process.env.TOKEN;
-if (!token) {
-    console.error('ERROR: TOKEN is missing in Railway Variables!');
-} else {
-    client.login(token).catch(err => console.error('Login Error:', err));
-}
+client.login(process.env.TOKEN);
